@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { createBrowserClient } from "@/lib/supabase/client"
 import type { Profile } from "@/lib/types"
-import { Search, User } from "lucide-react"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faMagnifyingGlass, faUser } from "@fortawesome/free-solid-svg-icons"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 
@@ -107,7 +108,7 @@ export function AdminUsers() {
       </CardHeader>
       <CardContent>
         <div className="flex items-center space-x-2 mb-4">
-          <Search className="h-4 w-4 text-muted-foreground" />
+          <FontAwesomeIcon icon={faMagnifyingGlass} className="h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search users..."
             value={searchTerm}
@@ -133,7 +134,7 @@ export function AdminUsers() {
                   <TableCell>
                     <div className="flex items-center space-x-3">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-4 w-4" />
+                        <FontAwesomeIcon icon={faUser} className="h-4 w-4" />
                       </div>
                       <div>
                         <div className="font-medium">{user.full_name || "Unknown"}</div>

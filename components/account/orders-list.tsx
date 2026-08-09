@@ -20,6 +20,13 @@ interface OrdersListProps {
         image_url: string | null
       } | null
     })[]
+    suborders?: {
+      id: string
+      vendor_id: string
+      status: string
+      subtotal: number
+      vendors: { store_name: string; slug: string } | null
+    }[]
   })[]
 }
 
@@ -143,6 +150,17 @@ export function OrdersList({ orders }: OrdersListProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {/* Per-vendor fulfillment status */}
+              {order.suborders && order.suborders.length > 1 && (
+                <div className="flex flex-wrap gap-2">
+                  {order.suborders.map((suborder) => (
+                    <Badge key={suborder.id} variant="outline" className={getStatusColor(suborder.status)}>
+                      {suborder.vendors?.store_name || "Store"}: {suborder.status}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
               {/* Order Items Preview */}
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {order.order_items.slice(0, 3).map((item) => (
@@ -164,7 +182,7 @@ export function OrdersList({ orders }: OrdersListProps) {
               {/* Actions */}
               <div className="flex gap-2 flex-wrap">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={/orders/}>
+                  <Link href={`/orders/${order.id}`}>
                     <Eye className="h-4 w-4 mr-2" />
                     View Details
                   </Link>

@@ -57,7 +57,8 @@ export function CheckoutForm({ user }: CheckoutFormProps) {
             name,
             price,
             stock_quantity,
-            is_active
+            is_active,
+            vendor_id
           )
         `)
         .eq("user_id", user.id)
@@ -100,13 +101,83 @@ export function CheckoutForm({ user }: CheckoutFormProps) {
         throw new Error("Failed to create order")
       }
 
-      // Create order items
-      const orderItems = cartItems.map((item) => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        price: item.products?.price || 0,
-      }))
+      // Group cart items by vendor so each seller gets their own suborder
+      const vendorGroups = new Map<string, typeof cartItems>()
+      const unassignedItems: typeof cartItems = []
+
+      for (const item of cartItems) {
+        const vendorId = item.products?.vendor_id
+        if (!vendorId) {
+          unassignedItems.push(item)
+          continue
+        }
+        const group = vendorGroups.get(vendorId) || []
+        group.push(item)
+        vendorGroups.set(vendorId, group)
+      }
+
+      const vendorIds = Array.from(vendorGroups.keys())
+      const { data: vendors, error: vendorsError } = vendorIds.length
+        ? await supabase.from("vendors").select("id, commission_rate").in("id", vendorIds)
+        : { data: [], error: null }
+
+      if (vendorsError) {
+        throw new Error("Failed to load vendor details")
+      }
+
+      const commissionByVendor = new Map((vendors || []).map((v) => [v.id, v.commission_rate]))
+      const orderItems: {
+        order_id: string
+        product_id: string
+        quantity: number
+        price: number
+        vendor_id: string | null
+        suborder_id: string | null
+      }[] = []
+
+      for (const [vendorId, items] of vendorGroups) {
+        const subtotal = items.reduce((sum, item) => sum + (item.products?.price || 0) * item.quantity, 0)
+        const commissionRate = commissionByVendor.get(vendorId) ?? 0
+        const commissionAmount = Math.round(subtotal * (commissionRate / 100))
+
+        const { data: suborder, error: suborderError } = await supabase
+          .from("suborders")
+          .insert({
+            order_id: order.id,
+            vendor_id: vendorId,
+            subtotal,
+            commission_rate: commissionRate,
+            commission_amount: commissionAmount,
+          })
+          .select()
+          .single()
+
+        if (suborderError || !suborder) {
+          throw new Error("Failed to create vendor order")
+        }
+
+        for (const item of items) {
+          orderItems.push({
+            order_id: order.id,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.products?.price || 0,
+            vendor_id: vendorId,
+            suborder_id: suborder.id,
+          })
+        }
+      }
+
+      for (const item of unassignedItems) {
+        orderItems.push({
+          order_id: order.id,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: item.products?.price || 0,
+          vendor_id: null,
+          suborder_id: null,
+        })
+      }
 
       const { error: orderItemsError } = await supabase.from("order_items").insert(orderItems)
 

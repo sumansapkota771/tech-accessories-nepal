@@ -11,9 +11,7 @@ export function Footer() {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">TA</span>
-              </div>
+              <img src="/logo-mark.png" alt="Tech Accessories Nepal" className="h-8 w-8 object-contain" />
               <span className="font-bold text-lg text-primary">Tech Accessories Nepal</span>
             </div>
             <p className="text-sm text-muted-foreground">

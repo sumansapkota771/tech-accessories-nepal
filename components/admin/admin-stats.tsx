@@ -1,9 +1,19 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { StatCard } from "@/components/dashboard/stat-card"
 import { createBrowserClient } from "@/lib/supabase/client"
-import { Package, ShoppingCart, Users, DollarSign, TrendingUp, TrendingDown } from "lucide-react"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import {
+  faBoxOpen,
+  faCartShopping,
+  faUsers,
+  faSackDollar,
+  faArrowTrendUp,
+  faStore,
+  faClock,
+} from "@fortawesome/free-solid-svg-icons"
 
 interface Stats {
   totalProducts: number
@@ -12,6 +22,8 @@ interface Stats {
   totalRevenue: number
   recentOrders: number
   pendingOrders: number
+  totalVendors: number
+  pendingVendors: number
 }
 
 export function AdminStats() {
@@ -51,6 +63,17 @@ export function AdminStats() {
           .select("*", { count: "exact", head: true })
           .eq("status", "pending")
 
+        // Fetch vendor counts
+        const { count: totalVendorsCount } = await supabase
+          .from("vendors")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "approved")
+
+        const { count: pendingVendorsCount } = await supabase
+          .from("vendors")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "pending")
+
         setStats({
           totalProducts: productsCount || 0,
           totalOrders: ordersCount || 0,
@@ -58,6 +81,8 @@ export function AdminStats() {
           totalRevenue,
           recentOrders: recentOrdersCount || 0,
           pendingOrders: pendingOrdersCount || 0,
+          totalVendors: totalVendorsCount || 0,
+          pendingVendors: pendingVendorsCount || 0,
         })
       } catch (error) {
         console.error("Error fetching stats:", error)
@@ -90,65 +115,88 @@ export function AdminStats() {
 
   if (!stats) return null
 
-  const statCards = [
+  const heroCards = [
     {
-      title: "Total Products",
-      value: stats.totalProducts,
-      description: "Active products in store",
-      icon: Package,
-      trend: null,
+      title: "Total Revenue",
+      value: `Rs. ${stats.totalRevenue.toLocaleString()}`,
+      description: "All time revenue",
+      icon: faSackDollar,
+      gradient: "primary" as const,
     },
     {
       title: "Total Orders",
       value: stats.totalOrders,
       description: "All time orders",
-      icon: ShoppingCart,
-      trend: null,
-    },
-    {
-      title: "Total Users",
-      value: stats.totalUsers,
-      description: "Registered customers",
-      icon: Users,
-      trend: null,
-    },
-    {
-      title: "Total Revenue",
-      value: `Rs. ${stats.totalRevenue.toLocaleString()}`,
-      description: "All time revenue",
-      icon: DollarSign,
-      trend: null,
-    },
-    {
-      title: "Recent Orders",
-      value: stats.recentOrders,
-      description: "Orders in last 7 days",
-      icon: TrendingUp,
-      trend: "up",
+      icon: faCartShopping,
+      gradient: "secondary" as const,
     },
     {
       title: "Pending Orders",
       value: stats.pendingOrders,
       description: "Orders awaiting processing",
-      icon: TrendingDown,
-      trend: stats.pendingOrders > 0 ? "down" : null,
+      icon: faClock,
+      gradient: "alert" as const,
+    },
+  ]
+
+  const plainCards = [
+    {
+      title: "Total Products",
+      value: stats.totalProducts,
+      description: "Active products in store",
+      icon: faBoxOpen,
+    },
+    {
+      title: "Total Users",
+      value: stats.totalUsers,
+      description: "Registered customers",
+      icon: faUsers,
+    },
+    {
+      title: "Recent Orders",
+      value: stats.recentOrders,
+      description: "Orders in last 7 days",
+      icon: faArrowTrendUp,
+    },
+    {
+      title: "Active Vendors",
+      value: stats.totalVendors,
+      description: "Approved stores selling on the platform",
+      icon: faStore,
+    },
+    {
+      title: "Pending Vendor Applications",
+      value: stats.pendingVendors,
+      description: "Seller applications awaiting review",
+      icon: faClock,
     },
   ]
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {statCards.map((stat, index) => (
-        <Card key={index}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-            <stat.icon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stat.value}</div>
-            <p className="text-xs text-muted-foreground">{stat.description}</p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-3">
+        {heroCards.map((stat) => (
+          <StatCard
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            description={stat.description}
+            gradient={stat.gradient}
+            icon={<FontAwesomeIcon icon={stat.icon} className="h-4 w-4" />}
+          />
+        ))}
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {plainCards.map((stat) => (
+          <StatCard
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            description={stat.description}
+            icon={<FontAwesomeIcon icon={stat.icon} className="h-4 w-4" />}
+          />
+        ))}
+      </div>
     </div>
   )
 }

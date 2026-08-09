@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 
 export async function GET() {
   try {
-    const supabase = createServerClient()
+    const supabase = await createServerClient()
 
     // Check if user is admin
     const {
@@ -29,7 +29,8 @@ export async function GET() {
         supabase.from("orders").select("total_amount"),
       ])
 
-    const totalRevenue = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0
+    const totalRevenue =
+      orders?.reduce((sum: number, order: { total_amount: number | null }) => sum + (order.total_amount || 0), 0) || 0
 
     return NextResponse.json({
       totalProducts: productsCount || 0,

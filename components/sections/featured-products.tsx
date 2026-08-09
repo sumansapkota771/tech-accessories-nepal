@@ -4,15 +4,16 @@ import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import type { Product } from "@/lib/types"
 import { mockProducts } from "@/lib/mock-data"
+import { getProductRatings, attachRatings } from "@/lib/get-product-ratings"
 
 export async function FeaturedProducts() {
   // Try to fetch from Supabase, fallback to mock data
   let products: Product[] = []
-  
+
   try {
     const { createClient } = await import("@/lib/supabase/server")
     const supabase = await createClient()
-    
+
     const { data, error } = await supabase
       .from("products")
       .select(`
@@ -30,7 +31,8 @@ export async function FeaturedProducts() {
       console.error("Error fetching featured products:", error)
       products = mockProducts.filter(product => product.is_featured).slice(0, 8)
     } else {
-      products = data || []
+      const ratings = await getProductRatings(supabase, (data || []).map((p) => p.id))
+      products = attachRatings(data || [], ratings)
     }
   } catch (error) {
     console.error("Supabase connection error:", error)

@@ -32,6 +32,17 @@ export default async function OrderPage({ params }: OrderPageProps) {
           image_url,
           price
         )
+      ),
+      suborders (
+        id,
+        vendor_id,
+        status,
+        subtotal,
+        tracking_number,
+        vendors (
+          store_name,
+          slug
+        )
       )
     `)
     .eq("id", id)

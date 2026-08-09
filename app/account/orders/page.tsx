@@ -27,6 +27,16 @@ export default async function OrdersPage() {
           name,
           image_url
         )
+      ),
+      suborders (
+        id,
+        vendor_id,
+        status,
+        subtotal,
+        vendors (
+          store_name,
+          slug
+        )
       )
     `)
     .eq("user_id", user.id)

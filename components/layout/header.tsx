@@ -22,6 +22,8 @@ import type { User as SupabaseUser } from "@supabase/supabase-js"
 export function Header() {
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [cartItemsCount, setCartItemsCount] = useState(0)
+  const [wishlistCount, setWishlistCount] = useState(0)
+  const [role, setRole] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -33,6 +35,8 @@ export function Header() {
       setUser(session?.user ?? null)
       if (session?.user) {
         fetchCartItemsCount(session.user.id)
+        fetchWishlistCount(session.user.id)
+        fetchRole(session.user.id)
       }
       setLoading(false)
     }
@@ -43,8 +47,12 @@ export function Header() {
       setUser(session?.user ?? null)
       if (session?.user) {
         fetchCartItemsCount(session.user.id)
+        fetchWishlistCount(session.user.id)
+        fetchRole(session.user.id)
       } else {
         setCartItemsCount(0)
+        setWishlistCount(0)
+        setRole(null)
       }
     })
 
@@ -61,6 +69,20 @@ export function Header() {
       const totalItems = data.reduce((sum, item) => sum + item.quantity, 0)
       setCartItemsCount(totalItems)
     }
+  }
+
+  const fetchWishlistCount = async (userId: string) => {
+    const { count } = await supabase
+      .from("wishlists")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+
+    setWishlistCount(count || 0)
+  }
+
+  const fetchRole = async (userId: string) => {
+    const { data } = await supabase.from("profiles").select("role").eq("id", userId).single()
+    setRole(data?.role ?? null)
   }
 
   const handleSignOut = async () => {
@@ -100,9 +122,7 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">TA</span>
-            </div>
+            <img src="/logo-mark.png" alt="Tech Accessories Nepal" className="h-9 w-9 object-contain" />
             <span className="font-bold text-xl text-primary">Tech Accessories Nepal</span>
           </Link>
 
@@ -144,9 +164,16 @@ export function Header() {
             </Button>
 
             {/* Wishlist */}
-            <Button variant="ghost" size="icon">
-              <Heart className="h-5 w-5" />
-            </Button>
+            <Link href={user ? "/account/wishlist" : "/auth/login"}>
+              <Button variant="ghost" size="icon" className="relative">
+                <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                    {wishlistCount}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
 
             {/* Cart */}
             <Link href="/cart">
@@ -178,6 +205,16 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link href="/account/profile">Profile Settings</Link>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {role === "vendor" ? (
+                    <DropdownMenuItem asChild>
+                      <Link href="/vendor">Vendor Dashboard</Link>
+                    </DropdownMenuItem>
+                  ) : role !== "admin" ? (
+                    <DropdownMenuItem asChild>
+                      <Link href="/sell">Become a Seller</Link>
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={async () => {

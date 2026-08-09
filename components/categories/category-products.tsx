@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProductCard } from "@/components/ui/product-card"
+import { getProductRatings, attachRatings } from "@/lib/get-product-ratings"
 import type { Product } from "@/lib/types"
 
 interface CategoryProductsProps {
@@ -35,6 +36,9 @@ export async function CategoryProducts({ categoryId }: CategoryProductsProps) {
     )
   }
 
+  const ratings = await getProductRatings(supabase, products.map((p) => p.id))
+  const productsWithRatings = attachRatings(products, ratings)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -44,7 +48,7 @@ export async function CategoryProducts({ categoryId }: CategoryProductsProps) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products.map((product: Product) => (
+        {productsWithRatings.map((product: Product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>

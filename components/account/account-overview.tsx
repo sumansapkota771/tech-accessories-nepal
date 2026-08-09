@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Package, Heart, User, CreditCard } from "lucide-react"
+import { Package, Heart, User, CreditCard, ShoppingBag } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -13,13 +13,15 @@ export async function AccountOverview({ user }: AccountOverviewProps) {
   const supabase = await createClient()
 
   // Get user stats
-  const [ordersResult, cartResult] = await Promise.all([
+  const [ordersResult, cartResult, wishlistResult] = await Promise.all([
     supabase.from("orders").select("id", { count: "exact" }).eq("user_id", user.id),
     supabase.from("cart_items").select("quantity").eq("user_id", user.id),
+    supabase.from("wishlists").select("id", { count: "exact", head: true }).eq("user_id", user.id),
   ])
 
   const totalOrders = ordersResult.count || 0
   const cartItems = cartResult.data?.reduce((sum, item) => sum + item.quantity, 0) || 0
+  const wishlistCount = wishlistResult.count || 0
 
   return (
     <div className="space-y-6">
@@ -70,7 +72,7 @@ export async function AccountOverview({ user }: AccountOverviewProps) {
             <Heart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{wishlistCount}</div>
             <p className="text-xs text-muted-foreground">Saved items</p>
           </CardContent>
         </Card>
@@ -102,8 +104,14 @@ export async function AccountOverview({ user }: AccountOverviewProps) {
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-auto p-4 bg-transparent">
-              <Link href="/products" className="flex flex-col items-center gap-2">
+              <Link href="/account/wishlist" className="flex flex-col items-center gap-2">
                 <Heart className="h-6 w-6" />
+                <span>View Wishlist</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-auto p-4 bg-transparent">
+              <Link href="/products" className="flex flex-col items-center gap-2">
+                <ShoppingBag className="h-6 w-6" />
                 <span>Continue Shopping</span>
               </Link>
             </Button>

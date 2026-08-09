@@ -1,5 +1,25 @@
 // Mock data for development/demo purposes
-export const mockProducts = [
+import type { Vendor, Product, Category } from "./types"
+
+export const mockVendors: Vendor[] = [
+  {
+    id: "v1",
+    user_id: "u1",
+    store_name: "Kathmandu Gadgets",
+    slug: "kathmandu-gadgets",
+    description: "Your trusted source for phone and computer accessories in Kathmandu.",
+    logo_url: "/placeholder-logo.png",
+    banner_url: "/placeholder.jpg",
+    phone: "+977-9800000000",
+    address: "New Road, Kathmandu",
+    status: "approved",
+    commission_rate: 10,
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+]
+
+export const mockProducts: Product[] = [
   {
     id: "1",
     name: "Wireless Bluetooth Headphones",
@@ -7,6 +27,8 @@ export const mockProducts = [
     price: 2999,
     original_price: 3999,
     category_id: "1",
+    vendor_id: "v1",
+    approval_status: "approved",
     image_url: "/placeholder.jpg",
     images: ["/placeholder.jpg"],
     stock_quantity: 50,
@@ -24,9 +46,11 @@ export const mockProducts = [
       name: "Audio",
       description: "Audio accessories and equipment",
       image_url: "/placeholder.jpg",
+      is_active: true,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-01T00:00:00Z"
-    }
+    },
+    vendors: mockVendors[0]
   },
   {
     id: "2",
@@ -35,6 +59,8 @@ export const mockProducts = [
     price: 1299,
     original_price: 1599,
     category_id: "2",
+    vendor_id: "v1",
+    approval_status: "approved",
     image_url: "/placeholder.jpg",
     images: ["/placeholder.jpg"],
     stock_quantity: 100,
@@ -52,9 +78,11 @@ export const mockProducts = [
       name: "Phone Cases",
       description: "Protective cases for smartphones",
       image_url: "/placeholder.jpg",
+      is_active: true,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-01T00:00:00Z"
-    }
+    },
+    vendors: mockVendors[0]
   },
   {
     id: "3",
@@ -63,6 +91,8 @@ export const mockProducts = [
     price: 2499,
     original_price: 2999,
     category_id: "3",
+    vendor_id: "v1",
+    approval_status: "approved",
     image_url: "/placeholder.jpg",
     images: ["/placeholder.jpg"],
     stock_quantity: 75,
@@ -80,9 +110,11 @@ export const mockProducts = [
       name: "Chargers",
       description: "Power adapters and charging accessories",
       image_url: "/placeholder.jpg",
+      is_active: true,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-01T00:00:00Z"
-    }
+    },
+    vendors: mockVendors[0]
   },
   {
     id: "4",
@@ -91,6 +123,8 @@ export const mockProducts = [
     price: 1999,
     original_price: 2499,
     category_id: "4",
+    vendor_id: "v1",
+    approval_status: "approved",
     image_url: "/placeholder.jpg",
     images: ["/placeholder.jpg"],
     stock_quantity: 60,
@@ -108,18 +142,21 @@ export const mockProducts = [
       name: "Computer Accessories",
       description: "Computer peripherals and accessories",
       image_url: "/placeholder.jpg",
+      is_active: true,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-01T00:00:00Z"
-    }
+    },
+    vendors: mockVendors[0]
   }
 ]
 
-export const mockCategories = [
+export const mockCategories: Category[] = [
   {
     id: "1",
     name: "Audio",
     description: "Audio accessories and equipment",
     image_url: "/placeholder.svg?height=80&width=80",
+    is_active: true,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z"
   },
@@ -128,6 +165,7 @@ export const mockCategories = [
     name: "Phone Cases",
     description: "Protective cases for smartphones",
     image_url: "/placeholder.svg?height=80&width=80",
+    is_active: true,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z"
   },
@@ -136,6 +174,7 @@ export const mockCategories = [
     name: "Chargers",
     description: "Power adapters and charging accessories",
     image_url: "/placeholder.svg?height=80&width=80",
+    is_active: true,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z"
   },
@@ -144,6 +183,7 @@ export const mockCategories = [
     name: "Computer Accessories",
     description: "Computer peripherals and accessories",
     image_url: "/placeholder.svg?height=80&width=80",
+    is_active: true,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z"
   },
@@ -152,6 +192,7 @@ export const mockCategories = [
     name: "Cables",
     description: "USB cables and connectors",
     image_url: "/placeholder.svg?height=80&width=80",
+    is_active: true,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z"
   },
@@ -160,6 +201,7 @@ export const mockCategories = [
     name: "Storage",
     description: "Memory cards and storage devices",
     image_url: "/placeholder.svg?height=80&width=80",
+    is_active: true,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z"
   }

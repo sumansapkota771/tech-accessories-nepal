@@ -19,9 +19,11 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ImageUpload } from "@/components/ui/image-upload"
 import { createBrowserClient } from "@/lib/supabase/client"
 import type { Product, Category } from "@/lib/types"
-import { Plus, Edit, Trash2, Search } from "lucide-react"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faPlus, faPen, faTrash, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons"
 import { useToast } from "@/hooks/use-toast"
 
 export function AdminProducts() {
@@ -135,7 +137,7 @@ export function AdminProducts() {
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="h-4 w-4 mr-2" />
+                <FontAwesomeIcon icon={faPlus} className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
             </DialogTrigger>
@@ -157,7 +159,7 @@ export function AdminProducts() {
       </CardHeader>
       <CardContent>
         <div className="flex items-center space-x-2 mb-4">
-          <Search className="h-4 w-4 text-muted-foreground" />
+          <FontAwesomeIcon icon={faMagnifyingGlass} className="h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search products..."
             value={searchTerm}
@@ -211,10 +213,10 @@ export function AdminProducts() {
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end space-x-2">
                       <Button variant="outline" size="sm" onClick={() => setEditingProduct(product)}>
-                        <Edit className="h-4 w-4" />
+                        <FontAwesomeIcon icon={faPen} className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => handleDeleteProduct(product.id)}>
-                        <Trash2 className="h-4 w-4" />
+                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -375,15 +377,12 @@ function ProductForm({ product, categories, onSuccess }: ProductFormProps) {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="image_url">Image URL</Label>
-        <Input
-          id="image_url"
-          value={formData.image_url}
-          onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-          placeholder="https://example.com/image.jpg"
-        />
-      </div>
+      <ImageUpload
+        label="Product Image"
+        value={formData.image_url}
+        onChange={(url) => setFormData({ ...formData, image_url: url })}
+        folder="products"
+      />
 
       <div className="flex items-center space-x-4">
         <label className="flex items-center space-x-2">

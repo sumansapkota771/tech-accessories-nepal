@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { ProductCard } from "@/components/ui/product-card"
 import { ProductsPagination } from "@/components/products/products-pagination"
 import { ProductsSort } from "@/components/products/products-sort"
+import { getProductRatings, attachRatings } from "@/lib/get-product-ratings"
 import type { Product } from "@/lib/types"
 
 interface ProductsGridProps {
@@ -82,6 +83,8 @@ export async function ProductsGrid({ searchParams }: ProductsGridProps) {
   }
 
   const totalPages = Math.ceil((count || 0) / limit)
+  const ratings = await getProductRatings(supabase, (products || []).map((p) => p.id))
+  const productsWithRatings = attachRatings(products || [], ratings)
 
   return (
     <div className="space-y-6">
@@ -94,9 +97,9 @@ export async function ProductsGrid({ searchParams }: ProductsGridProps) {
       </div>
 
       {/* Products Grid */}
-      {products && products.length > 0 ? (
+      {productsWithRatings && productsWithRatings.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product: Product) => (
+          {productsWithRatings.map((product: Product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

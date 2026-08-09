@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createBrowserClient } from "@/lib/supabase/client"
 import type { Order } from "@/lib/types"
-import { Search, Eye } from "lucide-react"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faMagnifyingGlass, faEye } from "@fortawesome/free-solid-svg-icons"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
@@ -34,15 +35,20 @@ export function AdminOrders() {
         .from("orders")
         .select(`
           *,
-          profiles:customer_id (
+          profiles (
             id,
             full_name,
             email
+          ),
+          suborders (
+            id,
+            status,
+            vendors (
+              store_name
+            )
           )
         `)
         .order("created_at", { ascending: false })
-
-      console.log("Supabase fetch result:", { data, error })
 
       if (error) throw error
 
@@ -143,7 +149,7 @@ export function AdminOrders() {
         <div className="flex gap-4 mb-6">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search orders..."
                 value={searchTerm}
@@ -174,6 +180,7 @@ export function AdminOrders() {
               <TableRow>
                 <TableHead>Order ID</TableHead>
                 <TableHead>Customer</TableHead>
+                <TableHead>Vendors</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Status</TableHead>
@@ -189,6 +196,15 @@ export function AdminOrders() {
                     <div>
                       <div className="font-medium">{order.profiles?.full_name || "Unknown"}</div>
                       <div className="text-sm text-muted-foreground">{order.profiles?.email}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {(order.suborders || []).map((suborder: any) => (
+                        <Badge key={suborder.id} variant="outline" className="text-xs">
+                          {suborder.vendors?.store_name || "Store"}
+                        </Badge>
+                      ))}
                     </div>
                   </TableCell>
                   <TableCell>{format(new Date(order.created_at), "MMM dd, yyyy")}</TableCell>
@@ -216,7 +232,7 @@ export function AdminOrders() {
                       size="sm"
                       onClick={() => router.push(`/orders/${order.id}`)}
                     >
-                      <Eye className="h-4 w-4" />
+                      <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>

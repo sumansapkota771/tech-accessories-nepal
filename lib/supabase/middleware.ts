@@ -43,5 +43,12 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Protect vendor dashboard routes
+  if (request.nextUrl.pathname.startsWith("/vendor") && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/auth/login"
+    return NextResponse.redirect(url)
+  }
+
   return supabaseResponse
 }

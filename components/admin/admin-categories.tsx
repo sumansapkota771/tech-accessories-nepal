@@ -17,9 +17,11 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { ImageUpload } from "@/components/ui/image-upload"
 import { createBrowserClient } from "@/lib/supabase/client"
 import type { Category } from "@/lib/types"
-import { Plus, Edit, Trash2, Search, Tag } from "lucide-react"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faPlus, faPen, faTrash, faMagnifyingGlass, faTag } from "@fortawesome/free-solid-svg-icons"
 import { useToast } from "@/hooks/use-toast"
 
 interface CategoryWithCount extends Category {
@@ -138,7 +140,7 @@ export function AdminCategories() {
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="h-4 w-4 mr-2" />
+                <FontAwesomeIcon icon={faPlus} className="h-4 w-4 mr-2" />
                 Add Category
               </Button>
             </DialogTrigger>
@@ -159,7 +161,7 @@ export function AdminCategories() {
       </CardHeader>
       <CardContent>
         <div className="flex items-center space-x-2 mb-4">
-          <Search className="h-4 w-4 text-muted-foreground" />
+          <FontAwesomeIcon icon={faMagnifyingGlass} className="h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search categories..."
             value={searchTerm}
@@ -184,7 +186,7 @@ export function AdminCategories() {
                   <TableCell>
                     <div className="flex items-center space-x-3">
                       <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center">
-                        <Tag className="h-5 w-5 text-primary" />
+                        <FontAwesomeIcon icon={faTag} className="h-5 w-5 text-primary" />
                       </div>
                       <div>
                         <div className="font-medium">{category.name}</div>
@@ -203,10 +205,10 @@ export function AdminCategories() {
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end space-x-2">
                       <Button variant="outline" size="sm" onClick={() => setEditingCategory(category)}>
-                        <Edit className="h-4 w-4" />
+                        <FontAwesomeIcon icon={faPen} className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => handleDeleteCategory(category.id)}>
-                        <Trash2 className="h-4 w-4" />
+                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -312,15 +314,12 @@ function CategoryForm({ category, onSuccess }: CategoryFormProps) {
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="image_url">Image URL</Label>
-        <Input
-          id="image_url"
-          value={formData.image_url}
-          onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-          placeholder="https://example.com/category-image.jpg"
-        />
-      </div>
+      <ImageUpload
+        label="Category Image"
+        value={formData.image_url}
+        onChange={(url) => setFormData({ ...formData, image_url: url })}
+        folder="categories"
+      />
 
       <div className="flex items-center space-x-2">
         <input

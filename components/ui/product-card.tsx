@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Heart, ShoppingCart, Star } from "lucide-react"
+import { WishlistButton } from "@/components/ui/wishlist-button"
+import { ShoppingCart, Star } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import type { Product } from "@/lib/types"
@@ -73,10 +75,12 @@ export function ProductCard({ product }: ProductCardProps) {
     <Card className="group overflow-hidden hover:shadow-lg transition-shadow duration-300">
       <div className="relative aspect-square overflow-hidden">
         <Link href={`/products/${product.id}`}>
-          <img
+          <Image
             src={product.image_url || "/placeholder.svg?height=300&width=300"}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
         </Link>
 
@@ -95,13 +99,10 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Wishlist Button */}
-        <Button
-          variant="ghost"
-          size="icon"
+        <WishlistButton
+          productId={product.id}
           className="absolute top-2 right-2 h-8 w-8 bg-background/80 hover:bg-background"
-        >
-          <Heart className="h-4 w-4" />
-        </Button>
+        />
 
         {/* Quick Add to Cart */}
         <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -121,12 +122,23 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {product.categories && <p className="text-xs text-muted-foreground mb-2">{product.categories.name}</p>}
 
-        <div className="flex items-center gap-1 mb-2">
-          {[...Array(5)].map((_, i) => (
-            <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-          ))}
-          <span className="text-xs text-muted-foreground ml-1">(4.5)</span>
-        </div>
+        {product.review_count ? (
+          <div className="flex items-center gap-1 mb-2">
+            {[...Array(5)].map((_, i) => (
+              <Star
+                key={i}
+                className={`h-3 w-3 ${
+                  i < Math.round(product.avg_rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
+                }`}
+              />
+            ))}
+            <span className="text-xs text-muted-foreground ml-1">
+              {product.avg_rating?.toFixed(1)} ({product.review_count})
+            </span>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground mb-2">No reviews yet</p>
+        )}
 
         <div className="flex items-center gap-2">
           <span className="font-bold text-primary">Rs. {product.price.toLocaleString()}</span>

@@ -21,7 +21,7 @@ export function WhyChooseUs() {
     {
       icon: CreditCard,
       title: "Secure Payment",
-      description: "Multiple payment options with secure checkout process",
+      description: "Cash on delivery with a secure, straightforward checkout",
     },
     {
       icon: RotateCcw,

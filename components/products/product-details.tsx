@@ -1,24 +1,35 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Heart, ShoppingCart, Star, Truck, Shield, RotateCcw } from "lucide-react"
+import Link from "next/link"
+import { ShoppingCart, Star, Truck, Shield, RotateCcw, Store } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import type { Product } from "@/lib/types"
+import { ProductReviews } from "@/components/products/product-reviews"
+import { WishlistButton } from "@/components/ui/wishlist-button"
+import type { Product, Review } from "@/lib/types"
 
 interface ProductDetailsProps {
   product: Product
+  reviews: (Review & { profiles: { full_name: string | null } | null })[]
+  canReview: boolean
+  hasExistingReview: boolean
+  isLoggedIn: boolean
 }
 
-export function ProductDetails({ product }: ProductDetailsProps) {
+const DESCRIPTION_TRUNCATE_LENGTH = 320
+
+export function ProductDetails({ product, reviews, canReview, hasExistingReview, isLoggedIn }: ProductDetailsProps) {
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
 
@@ -30,6 +41,17 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   const discountPercentage = product.original_price
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0
+
+  const { avgRating, reviewCount } = useMemo(() => {
+    if (reviews.length === 0) return { avgRating: 0, reviewCount: 0 }
+    const sum = reviews.reduce((acc, r) => acc + r.rating, 0)
+    return { avgRating: sum / reviews.length, reviewCount: reviews.length }
+  }, [reviews])
+
+  const description = product.description || ""
+  const isLongDescription = description.length > DESCRIPTION_TRUNCATE_LENGTH
+  const displayedDescription =
+    isLongDescription && !descriptionExpanded ? `${description.slice(0, DESCRIPTION_TRUNCATE_LENGTH).trim()}…` : description
 
   const addToCart = async () => {
     setIsLoading(true)
@@ -82,11 +104,14 @@ export function ProductDetails({ product }: ProductDetailsProps) {
       <div className="grid lg:grid-cols-2 gap-12">
         {/* Product Images */}
         <div className="space-y-4">
-          <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-            <img
+          <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+            <Image
               src={images[selectedImage] || "/placeholder.svg"}
               alt={product.name}
-              className="w-full h-full object-cover"
+              fill
+              priority
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
             />
           </div>
 
@@ -96,14 +121,16 @@ export function ProductDetails({ product }: ProductDetailsProps) {
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
-                  className={`aspect-square rounded-md overflow-hidden border-2 transition-colors ${
+                  className={`relative aspect-square rounded-md overflow-hidden border-2 transition-colors ${
                     selectedImage === index ? "border-primary" : "border-transparent"
                   }`}
                 >
-                  <img
+                  <Image
                     src={image || "/placeholder.svg"}
                     alt={`${product.name} ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="120px"
+                    className="object-cover"
                   />
                 </button>
               ))}
@@ -118,13 +145,36 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             <h1 className="text-3xl font-bold text-balance">{product.name}</h1>
 
             <div className="flex items-center gap-2 mt-2">
-              <div className="flex items-center">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                ))}
-              </div>
-              <span className="text-sm text-muted-foreground">(4.5) • 127 reviews</span>
+              {reviewCount > 0 ? (
+                <>
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${
+                          i < Math.round(avgRating) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    ({avgRating.toFixed(1)}) • {reviewCount} review{reviewCount !== 1 ? "s" : ""}
+                  </span>
+                </>
+              ) : (
+                <span className="text-sm text-muted-foreground">No reviews yet</span>
+              )}
             </div>
+
+            {product.vendors && (
+              <Link
+                href={`/store/${product.vendors.slug}`}
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors mt-2"
+              >
+                <Store className="h-3.5 w-3.5" />
+                Sold by <span className="font-medium">{product.vendors.store_name}</span>
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
@@ -141,7 +191,20 @@ export function ProductDetails({ product }: ProductDetailsProps) {
             </div>
           </div>
 
-          {product.description && <p className="text-muted-foreground">{product.description}</p>}
+          {description && (
+            <div>
+              <p className="text-muted-foreground whitespace-pre-line">{displayedDescription}</p>
+              {isLongDescription && (
+                <button
+                  type="button"
+                  onClick={() => setDescriptionExpanded((v) => !v)}
+                  className="text-sm text-primary hover:underline mt-1 font-medium"
+                >
+                  {descriptionExpanded ? "Show less" : "Read more"}
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -174,9 +237,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
               <ShoppingCart className="h-5 w-5 mr-2" />
               {product.stock_quantity === 0 ? "Out of Stock" : "Add to Cart"}
             </Button>
-            <Button variant="outline" size="lg">
-              <Heart className="h-5 w-5" />
-            </Button>
+            <WishlistButton productId={product.id} variant="outline" size="lg" />
           </div>
 
           {/* Features */}
@@ -202,7 +263,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
         <Tabs defaultValue="specifications" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="specifications">Specifications</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews {reviewCount > 0 ? `(${reviewCount})` : ""}</TabsTrigger>
             <TabsTrigger value="shipping">Shipping & Returns</TabsTrigger>
           </TabsList>
 
@@ -228,11 +289,15 @@ export function ProductDetails({ product }: ProductDetailsProps) {
           </TabsContent>
 
           <TabsContent value="reviews" className="mt-6">
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-muted-foreground">Reviews coming soon...</p>
-              </CardContent>
-            </Card>
+            <ProductReviews
+              productId={product.id}
+              reviews={reviews}
+              avgRating={avgRating}
+              reviewCount={reviewCount}
+              canReview={canReview}
+              hasExistingReview={hasExistingReview}
+              isLoggedIn={isLoggedIn}
+            />
           </TabsContent>
 
           <TabsContent value="shipping" className="mt-6">

@@ -1,85 +1,80 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AdminProducts } from "./admin-products"
 import { AdminOrders } from "./admin-orders"
 import { AdminUsers } from "./admin-users"
 import { AdminStats } from "./admin-stats"
+import { AdminAnalytics } from "./admin-analytics"
 import { AdminCategories } from "./admin-categories"
-import { Package, ShoppingCart, Users, BarChart3, Settings, Tag } from "lucide-react"
+import { AdminVendors } from "./admin-vendors"
+import { AdminSettings } from "./admin-settings"
+import { DashboardShell } from "@/components/dashboard/dashboard-shell"
+import {
+  faGauge,
+  faChartLine,
+  faBoxOpen,
+  faTags,
+  faStore,
+  faCartShopping,
+  faUsers,
+  faGear,
+} from "@fortawesome/free-solid-svg-icons"
+
+const NAV_ITEMS = [
+  { value: "overview", label: "Overview", icon: faGauge },
+  { value: "analytics", label: "Analytics", icon: faChartLine },
+  { value: "products", label: "Products", icon: faBoxOpen },
+  { value: "categories", label: "Categories", icon: faTags },
+  { value: "vendors", label: "Vendors", icon: faStore },
+  { value: "orders", label: "Orders", icon: faCartShopping },
+  { value: "users", label: "Users", icon: faUsers },
+  { value: "settings", label: "Settings", icon: faGear },
+] as const
+
+type AdminTab = (typeof NAV_ITEMS)[number]["value"]
+
+const TAB_META: Record<AdminTab, { title: string; subtitle: string }> = {
+  overview: { title: "Overview", subtitle: "A snapshot of store performance" },
+  analytics: { title: "Analytics", subtitle: "Revenue, orders, and vendor trends" },
+  products: { title: "Products", subtitle: "Review and manage every product listing" },
+  categories: { title: "Categories", subtitle: "Organize the storefront catalog" },
+  vendors: { title: "Vendors", subtitle: "Approve applications and manage sellers" },
+  orders: { title: "Orders", subtitle: "Track every order across all vendors" },
+  users: { title: "Users", subtitle: "Manage customer and staff accounts" },
+  settings: { title: "Settings", subtitle: "Your account and platform details" },
+}
 
 export function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState("overview")
+  const [activeTab, setActiveTab] = useState<AdminTab>("overview")
+  const meta = TAB_META[activeTab]
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Manage your Tech Accessories Nepal store</p>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="products" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Products
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center gap-2">
-            <Tag className="h-4 w-4" />
-            Categories
-          </TabsTrigger>
-          <TabsTrigger value="orders" className="flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4" />
-            Orders
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Users
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Settings
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview">
-          <AdminStats />
-        </TabsContent>
-
-        <TabsContent value="products">
-          <AdminProducts />
-        </TabsContent>
-
-        <TabsContent value="categories">
-          <AdminCategories />
-        </TabsContent>
-
-        <TabsContent value="orders">
-          <AdminOrders />
-        </TabsContent>
-
-        <TabsContent value="users">
-          <AdminUsers />
-        </TabsContent>
-
-        <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Store Settings</CardTitle>
-              <CardDescription>Configure your store settings and preferences</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Settings panel coming soon...</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+    <DashboardShell
+      sidebarHeader={
+        <div className="flex items-center gap-2.5 px-4 py-4">
+          <img src="/logo-mark.png" alt="" className="h-8 w-8 object-contain shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold leading-tight truncate">Tech Accessories</p>
+            <p className="text-[11px] text-muted-foreground leading-tight">Admin Panel</p>
+          </div>
+        </div>
+      }
+      navItems={NAV_ITEMS}
+      activeTab={activeTab}
+      onTabChange={(value) => setActiveTab(value as AdminTab)}
+      topbarTitle={meta.title}
+      topbarSubtitle={meta.subtitle}
+      roleLabel="Administrator"
+    >
+      {activeTab === "overview" && <AdminStats />}
+      {activeTab === "analytics" && <AdminAnalytics />}
+      {activeTab === "products" && <AdminProducts />}
+      {activeTab === "categories" && <AdminCategories />}
+      {activeTab === "vendors" && <AdminVendors />}
+      {activeTab === "orders" && <AdminOrders />}
+      {activeTab === "users" && <AdminUsers />}
+      {activeTab === "settings" && <AdminSettings />}
+    </DashboardShell>
   )
 }

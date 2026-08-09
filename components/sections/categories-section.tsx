@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import type { Category } from "@/lib/types"
@@ -42,9 +43,11 @@ export async function CategoriesSection() {
               <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
                 <CardContent className="p-6 text-center">
                   <div className="aspect-square rounded-full bg-primary/10 mb-4 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <img
+                    <Image
                       src={category.image_url || "/placeholder.svg?height=80&width=80"}
                       alt={category.name}
+                      width={48}
+                      height={48}
                       className="w-12 h-12 object-contain"
                     />
                   </div>

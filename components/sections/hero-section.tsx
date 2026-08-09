@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Shield, Truck, Headphones } from "lucide-react"
@@ -64,21 +65,24 @@ export function HeroSection() {
 
           {/* Hero Image */}
           <div className="relative">
-            <div className="aspect-square rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 p-8 flex items-center justify-center">
-              <img
+            <div className="relative aspect-square rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 p-8 flex items-center justify-center">
+              <Image
                 src="/placeholder-ivg3m.png"
                 alt="Tech Accessories Collection"
-                className="w-full h-full object-contain rounded-xl"
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-contain rounded-xl p-8"
+                priority
               />
             </div>
             {/* Floating Cards */}
             <div className="absolute -top-4 -left-4 bg-card border rounded-lg p-3 shadow-lg">
-              <p className="text-sm font-semibold">1000+ Products</p>
-              <p className="text-xs text-muted-foreground">In Stock</p>
+              <p className="text-sm font-semibold">Multi-Vendor Marketplace</p>
+              <p className="text-xs text-muted-foreground">Verified sellers only</p>
             </div>
             <div className="absolute -bottom-4 -right-4 bg-card border rounded-lg p-3 shadow-lg">
-              <p className="text-sm font-semibold">5000+ Customers</p>
-              <p className="text-xs text-muted-foreground">Trust Us</p>
+              <p className="text-sm font-semibold">Cash on Delivery</p>
+              <p className="text-xs text-muted-foreground">Pay when it arrives</p>
             </div>
           </div>
         </div>

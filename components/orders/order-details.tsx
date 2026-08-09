@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Package, MapPin, CreditCard, RotateCcw, X, Download, MessageCircle } from "lucide-react"
+import { Package, MapPin, CreditCard, RotateCcw, X, Download, MessageCircle, Truck } from "lucide-react"
+import { OrderStatusStepper } from "@/components/orders/order-status-stepper"
 import type { Order, OrderItem } from "@/lib/types"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
@@ -21,6 +22,14 @@ interface OrderDetailsProps {
         price: number
       } | null
     })[]
+    suborders?: {
+      id: string
+      vendor_id: string
+      status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled"
+      subtotal: number
+      tracking_number: string | null
+      vendors: { store_name: string; slug: string } | null
+    }[]
   }
 }
 
@@ -136,6 +145,18 @@ export function OrderDetails({ order }: OrderDetailsProps) {
 
   const shippingAddress = order.shipping_address as any
 
+  const itemsBySuborder = new Map<string, typeof order.order_items>()
+  const unassignedItems: typeof order.order_items = []
+  for (const item of order.order_items) {
+    if (item.suborder_id) {
+      const group = itemsBySuborder.get(item.suborder_id) || []
+      group.push(item)
+      itemsBySuborder.set(item.suborder_id, group)
+    } else {
+      unassignedItems.push(item)
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -209,34 +230,74 @@ export function OrderDetails({ order }: OrderDetailsProps) {
                 Order Items
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {order.order_items.map((item) => {
-                  const product = item.products
-                  if (!product) return null
-
-                  return (
-                    <div key={item.id} className="flex gap-4">
-                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                        <img
-                          src={product.image_url || "/placeholder.svg?height=64&width=64"}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
+            <CardContent className="space-y-6">
+              {order.suborders && order.suborders.length > 0
+                ? order.suborders.map((suborder) => (
+                    <div key={suborder.id} className="space-y-3">
+                      <div className="flex items-center justify-between pb-1">
+                        <span className="text-sm font-medium">{suborder.vendors?.store_name || "Store"}</span>
+                        {suborder.status === "cancelled" && <Badge variant="destructive">Cancelled</Badge>}
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-sm mb-1">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Quantity: {item.quantity}  Rs. {item.price.toLocaleString()}
+                      <OrderStatusStepper status={suborder.status} className="pb-2" />
+                      {suborder.tracking_number && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5 -mt-1">
+                          <Truck className="h-3.5 w-3.5" />
+                          Tracking number: <span className="font-medium text-foreground">{suborder.tracking_number}</span>
                         </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">Rs. {(item.price * item.quantity).toLocaleString()}</p>
-                      </div>
+                      )}
+                      <div className="border-b" />
+                      {(itemsBySuborder.get(suborder.id) || []).map((item) => {
+                        const product = item.products
+                        if (!product) return null
+                        return (
+                          <div key={item.id} className="flex gap-4">
+                            <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                              <img
+                                src={product.image_url || "/placeholder.svg?height=64&width=64"}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-sm mb-1">{product.name}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Quantity: {item.quantity}  Rs. {item.price.toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold">Rs. {(item.price * item.quantity).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                  )
-                })}
-              </div>
+                  ))
+                : null}
+
+              {unassignedItems.map((item) => {
+                const product = item.products
+                if (!product) return null
+                return (
+                  <div key={item.id} className="flex gap-4">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      <img
+                        src={product.image_url || "/placeholder.svg?height=64&width=64"}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm mb-1">{product.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Quantity: {item.quantity}  Rs. {item.price.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">Rs. {(item.price * item.quantity).toLocaleString()}</p>
+                    </div>
+                  </div>
+                )
+              })}
             </CardContent>
           </Card>
         </div>

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProductCard } from "@/components/ui/product-card"
+import { getProductRatings, attachRatings } from "@/lib/get-product-ratings"
 import type { Product } from "@/lib/types"
 
 interface RelatedProductsProps {
@@ -30,12 +31,15 @@ export async function RelatedProducts({ categoryId, currentProductId }: RelatedP
     return null
   }
 
+  const ratings = await getProductRatings(supabase, products.map((p) => p.id))
+  const productsWithRatings = attachRatings(products, ratings)
+
   return (
     <section className="py-16">
       <div className="container mx-auto px-4">
         <h2 className="text-2xl font-bold mb-8">Related Products</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((product: Product) => (
+          {productsWithRatings.map((product: Product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
