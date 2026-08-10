@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { CreditCard, Truck, MapPin } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
+import { placeOrder } from "@/lib/actions/checkout"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
@@ -24,7 +24,6 @@ export function CheckoutForm({ user }: CheckoutFormProps) {
   const [paymentMethod, setPaymentMethod] = useState("cod")
   const { toast } = useToast()
   const router = useRouter()
-  const supabase = createClient()
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -47,149 +46,10 @@ export function CheckoutForm({ user }: CheckoutFormProps) {
     setIsLoading(true)
 
     try {
-      // Get cart items
-      const { data: cartItems, error: cartError } = await supabase
-        .from("cart_items")
-        .select(`
-          *,
-          products (
-            id,
-            name,
-            price,
-            stock_quantity,
-            is_active,
-            vendor_id
-          )
-        `)
-        .eq("user_id", user.id)
+      const result = await placeOrder(formData, paymentMethod)
 
-      if (cartError || !cartItems || cartItems.length === 0) {
-        throw new Error("No items in cart")
-      }
-
-      // Calculate total
-      const total = cartItems.reduce((sum, item) => {
-        return sum + (item.products?.price || 0) * item.quantity
-      }, 0)
-
-      const shippingCost = total >= 5000 ? 0 : 150
-      const tax = Math.round(total * 0.13)
-      const finalTotal = total + shippingCost + tax
-
-      // Create order
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: user.id,
-          total_amount: finalTotal,
-          status: "pending",
-          payment_method: paymentMethod,
-          payment_status: paymentMethod === "cod" ? "pending" : "pending",
-          shipping_address: {
-            full_name: formData.fullName,
-            phone: formData.phone,
-            address: formData.address,
-            city: formData.city,
-            postal_code: formData.postalCode,
-            notes: formData.notes,
-          },
-        })
-        .select()
-        .single()
-
-      if (orderError || !order) {
-        throw new Error("Failed to create order")
-      }
-
-      // Group cart items by vendor so each seller gets their own suborder
-      const vendorGroups = new Map<string, typeof cartItems>()
-      const unassignedItems: typeof cartItems = []
-
-      for (const item of cartItems) {
-        const vendorId = item.products?.vendor_id
-        if (!vendorId) {
-          unassignedItems.push(item)
-          continue
-        }
-        const group = vendorGroups.get(vendorId) || []
-        group.push(item)
-        vendorGroups.set(vendorId, group)
-      }
-
-      const vendorIds = Array.from(vendorGroups.keys())
-      const { data: vendors, error: vendorsError } = vendorIds.length
-        ? await supabase.from("vendors").select("id, commission_rate").in("id", vendorIds)
-        : { data: [], error: null }
-
-      if (vendorsError) {
-        throw new Error("Failed to load vendor details")
-      }
-
-      const commissionByVendor = new Map((vendors || []).map((v) => [v.id, v.commission_rate]))
-      const orderItems: {
-        order_id: string
-        product_id: string
-        quantity: number
-        price: number
-        vendor_id: string | null
-        suborder_id: string | null
-      }[] = []
-
-      for (const [vendorId, items] of vendorGroups) {
-        const subtotal = items.reduce((sum, item) => sum + (item.products?.price || 0) * item.quantity, 0)
-        const commissionRate = commissionByVendor.get(vendorId) ?? 0
-        const commissionAmount = Math.round(subtotal * (commissionRate / 100))
-
-        const { data: suborder, error: suborderError } = await supabase
-          .from("suborders")
-          .insert({
-            order_id: order.id,
-            vendor_id: vendorId,
-            subtotal,
-            commission_rate: commissionRate,
-            commission_amount: commissionAmount,
-          })
-          .select()
-          .single()
-
-        if (suborderError || !suborder) {
-          throw new Error("Failed to create vendor order")
-        }
-
-        for (const item of items) {
-          orderItems.push({
-            order_id: order.id,
-            product_id: item.product_id,
-            quantity: item.quantity,
-            price: item.products?.price || 0,
-            vendor_id: vendorId,
-            suborder_id: suborder.id,
-          })
-        }
-      }
-
-      for (const item of unassignedItems) {
-        orderItems.push({
-          order_id: order.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          price: item.products?.price || 0,
-          vendor_id: null,
-          suborder_id: null,
-        })
-      }
-
-      const { error: orderItemsError } = await supabase.from("order_items").insert(orderItems)
-
-      if (orderItemsError) {
-        throw new Error("Failed to create order items")
-      }
-
-      // Clear cart
-      const { error: clearCartError } = await supabase.from("cart_items").delete().eq("user_id", user.id)
-
-      if (clearCartError) {
-        console.error("Failed to clear cart:", clearCartError)
+      if (!result.success || !result.orderId) {
+        throw new Error(result.error || "Failed to place order")
       }
 
       toast({
@@ -197,12 +57,12 @@ export function CheckoutForm({ user }: CheckoutFormProps) {
         description: "You will receive a confirmation email shortly.",
       })
 
-      router.push(`/orders/${order.id}`)
+      router.push(`/orders/${result.orderId}`)
     } catch (error) {
       console.error("Checkout error:", error)
       toast({
         title: "Error",
-        description: "Failed to place order. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to place order. Please try again.",
         variant: "destructive",
       })
     } finally {
