@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,8 @@ export function Header() {
   const [role, setRole] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -112,10 +114,6 @@ export function Header() {
     { name: "About", href: "/about" },
   ]
 
-  if (loading) {
-    return null // or a skeleton loader
-  }
-
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
@@ -127,7 +125,7 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
+          <nav className="hidden md:flex items-center space-x-6" aria-label="Main navigation">
             {navigationItems.map((item) => (
               <Link
                 key={item.name}
@@ -159,13 +157,40 @@ export function Header() {
           {/* Right Side Actions */}
           <div className="flex items-center space-x-2">
             {/* Mobile Search */}
-            <Button variant="ghost" size="icon" className="lg:hidden">
-              <Search className="h-5 w-5" />
-            </Button>
+            <Sheet open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Search products">
+                  <Search className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="top" className="h-auto">
+                <form
+                  onSubmit={(e) => {
+                    handleSearch(e)
+                    setMobileSearchOpen(false)
+                  }}
+                  className="flex items-center space-x-2 pt-4"
+                >
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      ref={mobileSearchInputRef}
+                      type="search"
+                      placeholder="Search products..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                      autoFocus
+                    />
+                  </div>
+                  <Button type="submit" size="sm">Search</Button>
+                </form>
+              </SheetContent>
+            </Sheet>
 
             {/* Wishlist */}
             <Link href={user ? "/account/wishlist" : "/auth/login"}>
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon" aria-label="Wishlist" className="relative">
                 <Heart className="h-5 w-5" />
                 {wishlistCount > 0 && (
                   <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
@@ -177,7 +202,7 @@ export function Header() {
 
             {/* Cart */}
             <Link href="/cart">
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon" aria-label={`Shopping cart${cartItemsCount > 0 ? ` with ${cartItemsCount} items` : ""}`} className="relative">
                 <ShoppingCart className="h-5 w-5" />
                 {cartItemsCount > 0 && (
                   <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
@@ -191,7 +216,7 @@ export function Header() {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" aria-label="User menu">
                     <User className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -239,7 +264,7 @@ export function Header() {
             {/* Mobile Menu */}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
+                <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open navigation menu">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>

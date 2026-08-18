@@ -21,7 +21,9 @@ export function ProductCard({ product }: ProductCardProps) {
   const { toast } = useToast()
   const supabase = createClient()
 
-  const addToCart = async () => {
+  const addToCart = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     setIsLoading(true)
 
     try {
@@ -72,9 +74,9 @@ export function ProductCard({ product }: ProductCardProps) {
     : 0
 
   return (
-    <Card className="group overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <Card className="group overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer">
       <div className="relative aspect-square overflow-hidden">
-        <Link href={`/products/${product.id}`}>
+        <Link href={`/products/${product.id}`} aria-label={`View ${product.name}`}>
           <Image
             src={product.image_url || "/placeholder.svg?height=300&width=300"}
             alt={product.name}
@@ -106,7 +108,13 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Quick Add to Cart */}
         <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <Button onClick={addToCart} disabled={isLoading || product.stock_quantity === 0} className="w-full" size="sm">
+          <Button
+            onClick={addToCart}
+            disabled={isLoading || product.stock_quantity === 0}
+            className="w-full"
+            size="sm"
+            aria-label={`Add ${product.name} to cart`}
+          >
             <ShoppingCart className="h-4 w-4 mr-2" />
             {product.stock_quantity === 0 ? "Out of Stock" : "Add to Cart"}
           </Button>
@@ -123,7 +131,7 @@ export function ProductCard({ product }: ProductCardProps) {
         {product.categories && <p className="text-xs text-muted-foreground mb-2">{product.categories.name}</p>}
 
         {product.review_count ? (
-          <div className="flex items-center gap-1 mb-2">
+          <div className="flex items-center gap-1 mb-2" role="img" aria-label={`${product.avg_rating?.toFixed(1)} out of 5 stars, ${product.review_count} reviews`}>
             {[...Array(5)].map((_, i) => (
               <Star
                 key={i}

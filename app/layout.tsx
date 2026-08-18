@@ -17,10 +17,47 @@ fontAwesomeConfig.autoAddCss = false
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
-  title: "Tech Accessories Nepal - Premium Tech Accessories Store",
+  title: {
+    default: "Tech Accessories Nepal - Premium Tech Accessories Store",
+    template: "%s | Tech Accessories Nepal",
+  },
   description:
-    "Your trusted source for premium tech accessories in Nepal. Phone cases, chargers, headphones, and more.",
-  generator: "v0.app",
+    "Your trusted source for premium tech accessories in Nepal. Phone cases, chargers, headphones, laptop accessories, and more. Quality products, competitive prices.",
+  keywords: [
+    "tech accessories Nepal",
+    "phone cases Nepal",
+    "laptop accessories",
+    "chargers Nepal",
+    "headphones Nepal",
+    "gaming accessories",
+    "Nepal online store",
+  ],
+  authors: [{ name: "Tech Accessories Nepal" }],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "Tech Accessories Nepal",
+    title: "Tech Accessories Nepal - Premium Tech Accessories Store",
+    description:
+      "Your trusted source for premium tech accessories in Nepal. Quality products, competitive prices, and excellent customer service.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tech Accessories Nepal",
+    description:
+      "Your trusted source for premium tech accessories in Nepal.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 }
 
 export const viewport: Viewport = {
@@ -33,7 +70,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <Suspense fallback={<div>Loading...</div>}>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>

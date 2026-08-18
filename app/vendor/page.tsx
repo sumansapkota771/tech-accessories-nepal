@@ -21,7 +21,7 @@ export default async function VendorPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <VendorDashboard vendor={vendor} />
+      <VendorDashboard vendor={vendor} userId={user.id} />
     </div>
   )
 }

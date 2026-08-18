@@ -4,6 +4,13 @@ import { Footer } from "@/components/layout/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Store, TrendingUp, Users, ShieldCheck } from "lucide-react"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Sell on Tech Accessories Nepal - Become a Vendor",
+  description:
+    "Join as a vendor and start selling tech accessories on Nepal's leading marketplace. Your own storefront, simple order management, and fair commission.",
+}
 
 export default function SellPage() {
   const benefits = [

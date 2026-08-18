@@ -4,10 +4,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import type { Category } from "@/lib/types"
-import { mockCategories } from "@/lib/mock-data"
 
 export async function CategoriesSection() {
-  // Try to fetch from Supabase, fallback to mock data
   let categories: Category[] = []
   
   try {
@@ -16,15 +14,11 @@ export async function CategoriesSection() {
     
     const { data, error } = await supabase.from("categories").select("*").limit(6)
 
-    if (error) {
-      console.error("Error fetching categories:", error)
-      categories = mockCategories.slice(0, 6)
-    } else {
-      categories = data || []
+    if (!error && data) {
+      categories = data
     }
-  } catch (error) {
-    console.error("Supabase connection error:", error)
-    categories = mockCategories.slice(0, 6)
+  } catch {
+    // Supabase unavailable — render empty section
   }
 
   return (
@@ -40,7 +34,7 @@ export async function CategoriesSection() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           {categories?.map((category: Category) => (
             <Link key={category.id} href={`/categories/${category.id}`}>
-              <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+              <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer">
                 <CardContent className="p-6 text-center">
                   <div className="aspect-square rounded-full bg-primary/10 mb-4 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                     <Image

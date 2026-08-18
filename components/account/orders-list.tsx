@@ -4,12 +4,14 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Package, Eye, RotateCcw, X } from "lucide-react"
+import { Eye, RotateCcw, X } from "lucide-react"
+import { cancelOrder } from "@/lib/actions/orders"
+import { getStatusColor, formatStatus } from "@/lib/order-utils"
 import type { Order, OrderItem } from "@/lib/types"
-import { createBrowserClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { createBrowserClient } from "@/lib/supabase/client"
 
 interface OrdersListProps {
   orders: (Order & {
@@ -36,35 +38,13 @@ export function OrdersList({ orders }: OrdersListProps) {
   const { toast } = useToast()
   const router = useRouter()
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800"
-      case "confirmed":
-        return "bg-blue-100 text-blue-800"
-      case "shipped":
-        return "bg-purple-100 text-purple-800"
-      case "delivered":
-        return "bg-green-100 text-green-800"
-      case "cancelled":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
   const handleReorder = async (order: Order & {
     order_items: (OrderItem & {
-      products: {
-        id: string
-        name: string
-        image_url: string | null
-      } | null
+      products: { id: string; name: string; image_url: string | null } | null
     })[]
   }) => {
     setIsLoading(order.id)
     try {
-      // Add all items from this order back to cart
       const cartItems = order.order_items.map((item) => ({
         user_id: order.user_id,
         product_id: item.product_id,
@@ -77,19 +57,11 @@ export function OrdersList({ orders }: OrdersListProps) {
 
       if (error) throw error
 
-      toast({
-        title: "Items added to cart",
-        description: "All items from this order have been added to your cart.",
-      })
-
+      toast({ title: "Items added to cart", description: "All items from this order have been added to your cart." })
       router.push("/cart")
     } catch (error) {
       console.error("Error reordering:", error)
-      toast({
-        title: "Error",
-        description: "Failed to add items to cart. Please try again.",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: "Failed to add items to cart.", variant: "destructive" })
     } finally {
       setIsLoading(null)
     }
@@ -98,24 +70,16 @@ export function OrdersList({ orders }: OrdersListProps) {
   const handleCancelOrder = async (orderId: string) => {
     setIsLoading(orderId)
     try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ status: "cancelled" })
-        .eq("id", orderId)
+      const result = await cancelOrder(orderId)
+      if (!result.success) throw new Error(result.error)
 
-      if (error) throw error
-
-      toast({
-        title: "Order cancelled",
-        description: "Your order has been cancelled successfully.",
-      })
-
+      toast({ title: "Order cancelled", description: "Your order has been cancelled successfully." })
       router.refresh()
     } catch (error) {
       console.error("Error cancelling order:", error)
       toast({
         title: "Error",
-        description: "Failed to cancel order. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to cancel order.",
         variant: "destructive",
       })
     } finally {
@@ -137,7 +101,7 @@ export function OrdersList({ orders }: OrdersListProps) {
               </div>
               <div className="flex items-center gap-3">
                 <Badge className={getStatusColor(order.status)}>
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  {formatStatus(order.status)}
                 </Badge>
                 <div className="text-right">
                   <p className="font-semibold">Rs. {order.total_amount.toLocaleString()}</p>
@@ -151,11 +115,11 @@ export function OrdersList({ orders }: OrdersListProps) {
           <CardContent>
             <div className="space-y-4">
               {/* Per-vendor fulfillment status */}
-              {order.suborders && order.suborders.length > 1 && (
+              {order.suborders && order.suborders.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {order.suborders.map((suborder) => (
                     <Badge key={suborder.id} variant="outline" className={getStatusColor(suborder.status)}>
-                      {suborder.vendors?.store_name || "Store"}: {suborder.status}
+                      {suborder.vendors?.store_name || "Store"}: {formatStatus(suborder.status)}
                     </Badge>
                   ))}
                 </div>
@@ -187,10 +151,10 @@ export function OrdersList({ orders }: OrdersListProps) {
                     View Details
                   </Link>
                 </Button>
-                
-                {order.status === "pending" && (
-                  <Button 
-                    variant="destructive" 
+
+                {(order.status === "pending" || order.status === "confirmed") && (
+                  <Button
+                    variant="destructive"
                     size="sm"
                     onClick={() => handleCancelOrder(order.id)}
                     disabled={isLoading === order.id}
@@ -200,10 +164,10 @@ export function OrdersList({ orders }: OrdersListProps) {
                     {isLoading === order.id ? "Cancelling..." : "Cancel Order"}
                   </Button>
                 )}
-                
-                {order.status === "delivered" && (
-                  <Button 
-                    variant="outline" 
+
+                {(order.status === "delivered" || order.status === "completed") && (
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => handleReorder(order)}
                     disabled={isLoading === order.id}

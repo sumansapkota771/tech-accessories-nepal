@@ -1,25 +1,44 @@
 ﻿"use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { createBrowserClient } from "@/lib/supabase/client"
-import type { Order } from "@/lib/types"
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faMagnifyingGlass, faEye } from "@fortawesome/free-solid-svg-icons"
+import { advanceMasterOrderStatus } from "@/lib/actions/orders"
+import { getValidMasterTransitions } from "@/lib/order-transitions"
+import { getStatusColor, formatStatus } from "@/lib/order-utils"
+import type { Order, OrderStatus } from "@/lib/types"
+import { Search, Eye, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
+
+const PAGE_SIZE = 25
+const ALL_MASTER_STATUSES: OrderStatus[] = [
+  "pending", "confirmed", "processing", "partially_shipped",
+  "shipped", "partially_delivered", "delivered", "completed", "cancelled",
+]
 
 export function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null)
+  const [page, setPage] = useState(0)
 
   const supabase = createBrowserClient()
   const { toast } = useToast()
@@ -35,29 +54,18 @@ export function AdminOrders() {
         .from("orders")
         .select(`
           *,
-          profiles (
-            id,
-            full_name,
-            email
-          ),
-          suborders (
-            id,
-            status,
-            vendors (
-              store_name
-            )
-          )
+          profiles (id, full_name, email),
+          suborders (id, status, vendors (store_name))
         `)
         .order("created_at", { ascending: false })
+        .limit(200)
 
       if (error) throw error
-
       setOrders(data || [])
-    } catch (err: any) {
-      console.error("Error fetching orders:", err)
+    } catch (err: unknown) {
       toast({
         title: "Error",
-        description: err?.message || "Failed to fetch orders",
+        description: err instanceof Error ? err.message : "Failed to fetch orders",
         variant: "destructive",
       })
     } finally {
@@ -65,73 +73,56 @@ export function AdminOrders() {
     }
   }
 
-  async function updateOrderStatus(orderId: string, newStatus: string) {
+  async function updateOrderStatus(orderId: string, newStatus: OrderStatus) {
+    setUpdatingId(orderId)
+    setConfirmDialog(null)
     try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ status: newStatus })
-        .eq("id", orderId)
+      const result = await advanceMasterOrderStatus(orderId, newStatus)
+      if (!result.success) throw new Error(result.error)
 
-      if (error) throw error
-
-      setOrders(prev =>
-        prev.map(order =>
-          order.id === orderId ? { ...order, status: newStatus as any } : order
-        )
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === orderId ? { ...order, status: newStatus } : order,
+        ),
       )
-
-      toast({
-        title: "Order updated",
-        description: `Order status changed to ${newStatus}`,
-      })
-    } catch (err: any) {
-      console.error("Error updating order status:", err)
+      toast({ title: "Order updated", description: `Status changed to ${formatStatus(newStatus)}` })
+    } catch (err: unknown) {
       toast({
         title: "Error",
-        description: err?.message || "Failed to update order status",
+        description: err instanceof Error ? err.message : "Failed to update",
         variant: "destructive",
       })
+    } finally {
+      setUpdatingId(null)
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800"
-      case "processing":
-        return "bg-blue-100 text-blue-800"
-      case "shipped":
-        return "bg-purple-100 text-purple-800"
-      case "delivered":
-        return "bg-green-100 text-green-800"
-      case "cancelled":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesSearch =
+        order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesStatus = statusFilter === "all" || order.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [orders, searchTerm, statusFilter])
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch =
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter
-
-    return matchesSearch && matchesStatus
-  })
+  const totalPages = Math.ceil(filteredOrders.length / PAGE_SIZE)
+  const paginatedOrders = filteredOrders.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Orders</CardTitle>
-          <CardDescription>Manage customer orders</CardDescription>
+          <CardDescription>Loading orders...</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <p>Loading orders...</p>
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-14 bg-muted animate-pulse rounded" />
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -139,114 +130,160 @@ export function AdminOrders() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Orders</CardTitle>
-        <CardDescription>Manage customer orders and track their status</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {/* Filters */}
-        <div className="flex gap-4 mb-6">
-          <div className="flex-1">
-            <div className="relative">
-              <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Orders</CardTitle>
+          <CardDescription>Manage customer orders across all vendors</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search orders..."
+                placeholder="Search by ID, customer name, or email..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(0) }}
+                className="pl-9"
               />
             </div>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0) }}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                {ALL_MASTER_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>{formatStatus(s)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="processing">Processing</SelectItem>
-              <SelectItem value="shipped">Shipped</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
-        {/* Orders Table */}
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Vendors</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+          <p className="text-xs text-muted-foreground mb-4">
+            Showing {paginatedOrders.length} of {filteredOrders.length} orders
+          </p>
 
-            <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-mono text-sm">#{order.id.substring(0, 8)}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{order.profiles?.full_name || "Unknown"}</div>
-                      <div className="text-sm text-muted-foreground">{order.profiles?.email}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {(order.suborders || []).map((suborder: any) => (
-                        <Badge key={suborder.id} variant="outline" className="text-xs">
-                          {suborder.vendors?.store_name || "Store"}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>{format(new Date(order.created_at), "MMM dd, yyyy")}</TableCell>
-                  <TableCell>Rs. {order.total_amount.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Select
-                      value={order.status}
-                      onValueChange={(value) => updateOrderStatus(order.id, value)}
-                    >
-                      <SelectTrigger className="w-[120px]">
-                        <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="processing">Processing</SelectItem>
-                        <SelectItem value="shipped">Shipped</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/orders/${order.id}`)}
-                    >
-                      <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Vendors</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        {filteredOrders.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No orders found</p>
+              </TableHeader>
+              <TableBody>
+                {paginatedOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No orders found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedOrders.map((order) => {
+                    const validTransitions = getValidMasterTransitions(order.status)
+                    return (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-mono text-xs">#{order.id.substring(0, 8)}</TableCell>
+                        <TableCell>
+                          <p className="text-sm font-medium">{order.profiles?.full_name || "Unknown"}</p>
+                          <p className="text-xs text-muted-foreground">{order.profiles?.email}</p>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {(order.suborders || []).map((sub: { id: string; status: string; vendors?: { store_name: string } }) => (
+                              <Badge key={sub.id} variant="outline" className="text-[10px]">
+                                {sub.vendors?.store_name || "Store"}: {sub.status.replace(/_/g, " ")}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {format(new Date(order.created_at), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">
+                          Rs. {order.total_amount.toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          {validTransitions.length > 0 ? (
+                            <Select
+                              value={order.status}
+                              onValueChange={(value) => setConfirmDialog({ orderId: order.id, newStatus: value as OrderStatus })}
+                              disabled={updatingId === order.id}
+                            >
+                              <SelectTrigger className="w-[130px]">
+                                <Badge className={getStatusColor(order.status)}>
+                                  {updatingId === order.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                                  {formatStatus(order.status)}
+                                </Badge>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={order.status}>{formatStatus(order.status)}</SelectItem>
+                                {validTransitions.map((t) => (
+                                  <SelectItem key={t.status} value={t.status}>→ {t.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge className={getStatusColor(order.status)}>{formatStatus(order.status)}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="h-7" onClick={() => router.push(`/orders/${order.id}`)}>
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <p className="text-xs text-muted-foreground">Page {page + 1} of {totalPages}</p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={!!confirmDialog} onOpenChange={() => setConfirmDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Status Change</DialogTitle>
+            <DialogDescription>
+              Change order #{confirmDialog?.orderId.substring(0, 8)} to{" "}
+              <strong>{confirmDialog && formatStatus(confirmDialog.newStatus)}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialog(null)}>Cancel</Button>
+            <Button
+              onClick={() => confirmDialog && updateOrderStatus(confirmDialog.orderId, confirmDialog.newStatus)}
+              disabled={!!updatingId}
+            >
+              {updatingId ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

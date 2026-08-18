@@ -4,6 +4,7 @@ import { Footer } from "@/components/layout/footer"
 import { ProductsGrid } from "@/components/products/products-grid"
 import { ProductsFilters } from "@/components/products/products-filters"
 import { ProductsSkeleton } from "@/components/products/products-skeleton"
+import type { Metadata } from "next"
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -12,8 +13,22 @@ interface ProductsPageProps {
     sort?: string
     min_price?: string
     max_price?: string
+    in_stock?: string
+    featured?: string
     page?: string
   }>
+}
+
+export async function generateMetadata({ searchParams }: ProductsPageProps): Promise<Metadata> {
+  const params = await searchParams
+  const title = params.search
+    ? `Search "${params.search}" - Tech Accessories Nepal`
+    : "All Products - Tech Accessories Nepal"
+  const description = params.search
+    ? `Browse search results for "${params.search}" at Tech Accessories Nepal.`
+    : "Discover our complete collection of premium tech accessories in Nepal."
+
+  return { title, description }
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
@@ -25,8 +40,14 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">All Products</h1>
-            <p className="text-muted-foreground">Discover our complete collection of premium tech accessories</p>
+            <h1 className="text-3xl font-bold mb-2">
+              {params.search ? `Search: "${params.search}"` : "All Products"}
+            </h1>
+            <p className="text-muted-foreground">
+              {params.search
+                ? `Results for "${params.search}" in our tech accessories collection`
+                : "Discover our complete collection of premium tech accessories"}
+            </p>
           </div>
 
           <div className="grid lg:grid-cols-4 gap-8">

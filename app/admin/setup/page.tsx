@@ -10,7 +10,6 @@ async function makeAdmin(formData: FormData) {
   const email = formData.get("email") as string
 
   if (!email) {
-    console.error("No email provided")
     return
   }
 
@@ -20,28 +19,39 @@ async function makeAdmin(formData: FormData) {
   } = await supabase.auth.getUser()
 
   if (!user || userError) {
-    console.error("User not authenticated:", userError)
+    redirect("/auth/login")
+  }
+
+  // SECURITY: Check if any admin already exists — bootstrap is one-time only
+  const { count } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("role", "admin")
+
+  if (count && count > 0) {
+    // Admin already exists — cannot bootstrap again
+    redirect("/admin")
+  }
+
+  // Verify the email matches the authenticated user
+  if (user.email !== email) {
     return
   }
 
-  console.log("Attempting to make user admin:", user.id, email)
-
-  // First, try to create the profile if it doesn't exist
   const { error: insertError } = await supabase
     .from("profiles")
     .upsert({
       id: user.id,
       email: user.email,
       full_name: user.user_metadata?.full_name || "",
-      role: "admin"
+      role: "admin",
     })
 
   if (insertError) {
-    console.error("Error creating/updating profile:", insertError)
+    console.error("Error creating admin:", insertError)
     return
   }
 
-  console.log("Successfully made user admin")
   redirect("/admin")
 }
 
@@ -57,7 +67,18 @@ export default async function AdminSetupPage() {
     redirect("/auth/login")
   }
 
-  // Check if profiles table exists and if user is already admin
+  // Check if any admin already exists
+  const { count } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("role", "admin")
+
+  if (count && count > 0) {
+    // Admin already exists — redirect to admin dashboard
+    redirect("/admin")
+  }
+
+  // Check if this user's profile exists
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
@@ -74,10 +95,9 @@ export default async function AdminSetupPage() {
         <CardHeader>
           <CardTitle>Admin Setup</CardTitle>
           <CardDescription>
-            {profileError ? 
-              "Database setup required. Click below to create admin account." : 
-              "No admin user exists. Set up the first admin account."
-            }
+            {profileError
+              ? "Database setup required. Click below to create the first admin account."
+              : "No admin user exists yet. Set up the first admin account."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -100,6 +120,10 @@ export default async function AdminSetupPage() {
               Make Me Admin
             </Button>
           </form>
+          <p className="mt-4 text-xs text-muted-foreground text-center">
+            This page is only available when no admin account exists.
+            After the first admin is created, this page will no longer be accessible.
+          </p>
           {profileError && (
             <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
               <p className="text-sm text-yellow-800">

@@ -1,6 +1,12 @@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { FeaturedProductsGrid } from "@/components/featured/featured-products-grid"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Featured Products - Tech Accessories Nepal",
+  description: "Discover our handpicked selection of premium tech accessories. Featured products at competitive prices.",
+}
 
 export default function FeaturedPage() {
   return (

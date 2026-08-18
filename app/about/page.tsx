@@ -2,6 +2,13 @@ import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { Card, CardContent } from "@/components/ui/card"
 import { Shield, Truck, Headphones, Award, Users, MapPin } from "lucide-react"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "About Us - Tech Accessories Nepal",
+  description:
+    "Learn about Tech Accessories Nepal. Your trusted source for premium tech accessories with quality guaranteed, fast delivery, and competitive prices.",
+}
 
 export default function AboutPage() {
   const features = [

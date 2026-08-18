@@ -13,7 +13,11 @@ export async function getProductRatings(
   const ratings = new Map<string, RatingSummary>()
   if (productIds.length === 0) return ratings
 
-  const { data, error } = await supabase.from("reviews").select("product_id, rating").in("product_id", productIds)
+  const { data, error } = await supabase
+    .from("reviews")
+    .select("product_id, rating")
+    .in("product_id", productIds)
+    .eq("is_hidden", false)
 
   if (error || !data) return ratings
 

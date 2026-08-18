@@ -27,7 +27,12 @@ export async function CartContent() {
         original_price,
         image_url,
         stock_quantity,
-        is_active
+        is_active,
+        vendor_id,
+        vendors (
+          id,
+          store_name
+        )
       )
     `)
     .eq("user_id", user.id)

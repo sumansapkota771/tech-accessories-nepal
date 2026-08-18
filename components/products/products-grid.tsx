@@ -12,6 +12,8 @@ interface ProductsGridProps {
     sort?: string
     min_price?: string
     max_price?: string
+    in_stock?: string
+    featured?: string
     page?: string
   }
 }
@@ -36,25 +38,43 @@ export async function ProductsGrid({ searchParams }: ProductsGridProps) {
       { count: "exact" },
     )
     .eq("is_active", true)
+    .eq("is_deleted", false)
 
-  // Apply filters
-  if (searchParams.search) {
-    query = query.ilike("name", `%${searchParams.search}%`)
-  }
-
+  // Multi-category filter
   if (searchParams.category) {
-    query = query.eq("category_id", searchParams.category)
+    const categories = searchParams.category.split(",").filter(Boolean)
+    if (categories.length === 1) {
+      query = query.eq("category_id", categories[0])
+    } else if (categories.length > 1) {
+      query = query.in("category_id", categories)
+    }
   }
 
+  // Search across name, brand, and SKU
+  if (searchParams.search) {
+    const term = searchParams.search.trim()
+    query = query.or(`name.ilike.%${term}%,brand.ilike.%${term}%,sku.ilike.%${term}%`)
+  }
+
+  // Price range
   if (searchParams.min_price) {
     query = query.gte("price", Number.parseFloat(searchParams.min_price))
   }
-
   if (searchParams.max_price) {
     query = query.lte("price", Number.parseFloat(searchParams.max_price))
   }
 
-  // Apply sorting
+  // In stock filter
+  if (searchParams.in_stock === "true") {
+    query = query.gt("stock_quantity", 0)
+  }
+
+  // Featured filter
+  if (searchParams.featured === "true") {
+    query = query.eq("is_featured", true)
+  }
+
+  // Sorting
   switch (searchParams.sort) {
     case "price_asc":
       query = query.order("price", { ascending: true })
@@ -65,21 +85,24 @@ export async function ProductsGrid({ searchParams }: ProductsGridProps) {
     case "name_asc":
       query = query.order("name", { ascending: true })
       break
-    case "newest":
-      query = query.order("created_at", { ascending: false })
+    case "rating":
+      query = query.order("avg_rating", { ascending: false })
+      break
+    case "popular":
+      query = query.order("review_count", { ascending: false })
       break
     default:
       query = query.order("created_at", { ascending: false })
   }
 
-  // Apply pagination
+  // Pagination
   query = query.range(offset, offset + limit - 1)
 
   const { data: products, error, count } = await query
 
   if (error) {
     console.error("Error fetching products:", error)
-    return <div>Error loading products</div>
+    return <div className="text-center py-12 text-muted-foreground">Error loading products. Please try again.</div>
   }
 
   const totalPages = Math.ceil((count || 0) / limit)
@@ -104,13 +127,16 @@ export async function ProductsGrid({ searchParams }: ProductsGridProps) {
           ))}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No products found matching your criteria.</p>
+        <div className="text-center py-16 border rounded-lg">
+          <p className="text-lg font-medium mb-2">No products found</p>
+          <p className="text-sm text-muted-foreground">Try adjusting your filters or search terms</p>
         </div>
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && <ProductsPagination currentPage={page} totalPages={totalPages} searchParams={searchParams} />}
+      {totalPages > 1 && (
+        <ProductsPagination currentPage={page} totalPages={totalPages} searchParams={searchParams} />
+      )}
     </div>
   )
 }

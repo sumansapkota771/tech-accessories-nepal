@@ -2,6 +2,12 @@ import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { CategoriesGrid } from "@/components/categories/categories-grid"
 import { createClient } from "@/lib/supabase/server"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Product Categories - Tech Accessories Nepal",
+  description: "Browse our complete range of tech accessories by category. Find phone cases, chargers, headphones, and more.",
+}
 
 export default async function CategoriesPage() {
   const supabase = await createClient()

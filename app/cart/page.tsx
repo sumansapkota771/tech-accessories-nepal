@@ -3,6 +3,12 @@ import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { CartContent } from "@/components/cart/cart-content"
 import { CartSkeleton } from "@/components/cart/cart-skeleton"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Shopping Cart - Tech Accessories Nepal",
+  description: "Review your items and proceed to checkout at Tech Accessories Nepal.",
+}
 
 export default function CartPage() {
   return (

@@ -9,19 +9,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { CreditCard, Truck, MapPin } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { CreditCard, Truck, MapPin, Clock, Store } from "lucide-react"
 import { placeOrder } from "@/lib/actions/checkout"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
+import type { CartItem } from "@/lib/types"
 
 interface CheckoutFormProps {
   user: User
+  items: CartItem[]
 }
 
-export function CheckoutForm({ user }: CheckoutFormProps) {
+export function CheckoutForm({ user, items }: CheckoutFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("cod")
+  const [deliveryMethod, setDeliveryMethod] = useState("standard")
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -41,12 +46,40 @@ export function CheckoutForm({ user }: CheckoutFormProps) {
     })
   }
 
+  // Group items by vendor for display
+  const vendorGroups = new Map<string, { vendorName: string; itemCount: number }>()
+  for (const item of items) {
+    const vendor = item.products?.vendors
+    if (vendor && "store_name" in vendor) {
+      const vendorId = item.products?.vendor_id || "unknown"
+      const existing = vendorGroups.get(vendorId)
+      if (existing) {
+        existing.itemCount += item.quantity
+      } else {
+        vendorGroups.set(vendorId, {
+          vendorName: (vendor as { store_name: string }).store_name,
+          itemCount: item.quantity,
+        })
+      }
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!termsAccepted) {
+      toast({
+        title: "Terms required",
+        description: "Please accept the terms and conditions to continue.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      const result = await placeOrder(formData, paymentMethod)
+      const result = await placeOrder(formData, paymentMethod, deliveryMethod, formData.notes)
 
       if (!result.success || !result.orderId) {
         throw new Error(result.error || "Failed to place order")
@@ -54,7 +87,7 @@ export function CheckoutForm({ user }: CheckoutFormProps) {
 
       toast({
         title: "Order placed successfully!",
-        description: "You will receive a confirmation email shortly.",
+        description: "You will receive a confirmation shortly.",
       })
 
       router.push(`/orders/${result.orderId}`)
@@ -72,6 +105,21 @@ export function CheckoutForm({ user }: CheckoutFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Seller Info */}
+      {vendorGroups.size > 1 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Store className="h-4 w-4" />
+              <span>
+                Your order includes items from {vendorGroups.size} sellers.
+                Each seller ships separately with their own delivery timeline.
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Shipping Information */}
       <Card>
         <CardHeader>
@@ -128,6 +176,58 @@ export function CheckoutForm({ user }: CheckoutFormProps) {
         </CardContent>
       </Card>
 
+      {/* Delivery Method */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Truck className="h-5 w-5" />
+            Delivery Method
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup value={deliveryMethod} onValueChange={setDeliveryMethod}>
+            <div className="flex items-center space-x-2 p-4 border rounded-lg">
+              <RadioGroupItem value="standard" id="standard" />
+              <Label htmlFor="standard" className="flex-1 cursor-pointer">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Standard Delivery</p>
+                    <p className="text-sm text-muted-foreground">3-5 business days</p>
+                  </div>
+                  <Truck className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2 p-4 border rounded-lg">
+              <RadioGroupItem value="express" id="express" />
+              <Label htmlFor="express" className="flex-1 cursor-pointer">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Express Delivery</p>
+                    <p className="text-sm text-muted-foreground">1-2 business days (+Rs. 250 per seller)</p>
+                  </div>
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2 p-4 border rounded-lg">
+              <RadioGroupItem value="self_pickup" id="self_pickup" />
+              <Label htmlFor="self_pickup" className="flex-1 cursor-pointer">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Self Pickup</p>
+                    <p className="text-sm text-muted-foreground">Pick up from seller locations (free)</p>
+                  </div>
+                  <Store className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </Label>
+            </div>
+          </RadioGroup>
+        </CardContent>
+      </Card>
+
       {/* Payment Method */}
       <Card>
         <CardHeader>
@@ -167,7 +267,28 @@ export function CheckoutForm({ user }: CheckoutFormProps) {
         </CardContent>
       </Card>
 
-      <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+      {/* Terms and Conditions */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-start space-x-3">
+            <Checkbox
+              id="terms"
+              checked={termsAccepted}
+              onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+            />
+            <Label htmlFor="terms" className="text-sm cursor-pointer leading-relaxed">
+              I agree to the{" "}
+              <a href="/about" className="text-primary underline" target="_blank" rel="noopener noreferrer">
+                terms and conditions
+              </a>{" "}
+              and confirm that the shipping information is correct. I understand that each seller may have different
+              delivery timelines.
+            </Label>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button type="submit" className="w-full" size="lg" disabled={isLoading || !termsAccepted}>
         {isLoading ? "Placing Order..." : "Place Order"}
       </Button>
     </form>

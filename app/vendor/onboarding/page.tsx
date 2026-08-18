@@ -32,7 +32,7 @@ export default async function VendorOnboardingPage() {
             <p className="text-muted-foreground">Set up your store to start selling on the marketplace.</p>
           </div>
 
-          {vendor ? <VendorApplicationStatus vendor={vendor} /> : <VendorOnboardingForm userId={user.id} />}
+          {vendor ? <VendorApplicationStatus vendor={vendor} /> : <VendorOnboardingForm userId={user.id} email={user.email || ""} fullName={user.user_metadata?.full_name} phone={user.user_metadata?.phone} existingVendor={vendor} />}
         </div>
       </main>
       <Footer />

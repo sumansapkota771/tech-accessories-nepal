@@ -1,0 +1,27 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "build",
+  "lsp": true,
+  "permission": {
+    "read": "allow",
+    "edit": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "lsp": "allow",
+    "bash": {
+      "*": "ask",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "pnpm build*": "allow",
+      "pnpm lint*": "allow",
+      "pnpm typecheck*": "allow",
+      "npm run build*": "allow",
+      "npm run lint*": "allow",
+      "npm run typecheck*": "allow",
+      "git push*": "deny",
+      "git reset --hard*": "deny",
+      "git clean*": "deny"
+    }
+  }
+}

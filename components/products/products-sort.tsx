@@ -11,7 +11,7 @@ export function ProductsSort() {
   const handleSortChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("sort", value)
-    params.delete("page") // Reset to first page
+    params.delete("page")
     router.push(`/products?${params.toString()}`)
   }
 
@@ -22,6 +22,8 @@ export function ProductsSort() {
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="newest">Newest First</SelectItem>
+        <SelectItem value="popular">Most Popular</SelectItem>
+        <SelectItem value="rating">Highest Rated</SelectItem>
         <SelectItem value="price_asc">Price: Low to High</SelectItem>
         <SelectItem value="price_desc">Price: High to Low</SelectItem>
         <SelectItem value="name_asc">Name: A to Z</SelectItem>

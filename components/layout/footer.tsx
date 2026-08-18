@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { NewsletterForm } from "@/components/layout/newsletter-form"
 
 export function Footer() {
   return (
@@ -19,14 +19,20 @@ export function Footer() {
               excellent customer service.
             </p>
             <div className="flex space-x-2">
-              <Button variant="ghost" size="icon">
-                <Facebook className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                  <Facebook className="h-4 w-4" />
+                </a>
               </Button>
-              <Button variant="ghost" size="icon">
-                <Instagram className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                  <Instagram className="h-4 w-4" />
+                </a>
               </Button>
-              <Button variant="ghost" size="icon">
-                <Twitter className="h-4 w-4" />
+              <Button variant="ghost" size="icon" asChild>
+                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
+                  <Twitter className="h-4 w-4" />
+                </a>
               </Button>
             </div>
           </div>
@@ -105,21 +111,20 @@ export function Footer() {
 
             <div className="space-y-2">
               <p className="text-sm font-medium">Subscribe to our newsletter</p>
-              <div className="flex space-x-2">
-                <Input placeholder="Enter your email" className="flex-1" />
-                <Button size="sm">Subscribe</Button>
-              </div>
+              <NewsletterForm />
             </div>
           </div>
         </div>
 
         <div className="border-t mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-sm text-muted-foreground">© 2024 Tech Accessories Nepal. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">
+            &copy; {new Date().getFullYear()} Tech Accessories Nepal. All rights reserved.
+          </p>
           <div className="flex space-x-4 mt-4 md:mt-0">
-            <Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <Link href="/about" className="text-sm text-muted-foreground hover:text-primary transition-colors">
               Privacy Policy
             </Link>
-            <Link href="/terms" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <Link href="/about" className="text-sm text-muted-foreground hover:text-primary transition-colors">
               Terms of Service
             </Link>
           </div>
